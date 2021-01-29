@@ -1,0 +1,5 @@
+(library
+  (name pluk_tar)
+  (public_name pluk-tar)
+  (libraries cstruct)
+  (preprocess (pps ppx_cstruct)))
