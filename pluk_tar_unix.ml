@@ -26,6 +26,8 @@ module IO = struct
   let close_out fd = Unix.close fd
 end
 
+module Tar = Pluk_tar
+
 module Archive = Tar.Make(IO)
 
 exception Unsupported_file_type

@@ -1,5 +1,16 @@
 (library
   (name pluk_tar)
   (public_name pluk-tar)
+  (modules pluk_tar)
+  (synopsis "TAR reader/writer")
   (libraries cstruct)
   (preprocess (pps ppx_cstruct)))
+
+(library
+  (name pluk_tar_unix)
+  (public_name pluk-tar-unix)
+  (synopsis "Unix support for TAR reader/writer")
+  (modules pluk_tar_unix)
+  (libraries unix pluk-tar)
+  (preprocess (pps ppx_cstruct)))
+

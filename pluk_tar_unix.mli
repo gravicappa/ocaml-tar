@@ -2,7 +2,7 @@
 
 exception Unsupported_file_type
 
-val header_of_file : string -> Tar.Header.t
+val header_of_file : string -> Pluk_tar.Header.t
 (** [header_of_file path] creates header from file [path]. *)
 
 module IO : sig
@@ -20,7 +20,7 @@ module IO : sig
   val close_out : out_channel -> unit
 end
 
-module Archive: Tar.Archive
+module Archive: Pluk_tar.Archive
 
 val extract: Archive.IO.in_channel -> (string -> string) -> unit Archive.IO.t
 (** [extract in_channel proc] extracts TAR archive to filesystem calling
@@ -33,14 +33,14 @@ val extract_from_file : string -> string -> unit Archive.IO.t
 
 val create_from_files :
   Archive.IO.out_channel ->
-  (Tar.Header.t -> Tar.Header.t) -> string Seq.t -> unit Archive.IO.t
+  (Pluk_tar.Header.t -> Pluk_tar.Header.t) -> string Seq.t -> unit Archive.IO.t
   (** [create_from_files out_channel proc files] creates TAR archive in
       [out_channel] from sequence [files] using [proc] to transform header
       entries. *)
 
 val create_file_from_files :
   ?strip_prefix:string ->
-  ?convert:(Tar.Header.t -> Tar.Header.t) ->
+  ?convert:(Pluk_tar.Header.t -> Pluk_tar.Header.t) ->
   string -> string Seq.t -> unit Archive.IO.t
   (** [create_file_from_files tar files] creates TAR archive [tar] from
       sequence [files] stripping [strip_prefix] from their names and calling
