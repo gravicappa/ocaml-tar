@@ -228,12 +228,12 @@ module Make (IO: IO) = struct
   type out_channel = IO.out_channel
   type 'a t = 'a IO.t
 
-  let ( let* ) = IO.bind
+  let ( >>= ) = IO.bind
 
   let io_exactly proc bytes off len =
     let rec loop off len =
       if len > 0 then
-        let* m = proc bytes off len in
+        proc bytes off len >>= fun m ->
         if m = 0 then
           raise IO_error
         else
@@ -251,11 +251,11 @@ module Make (IO: IO) = struct
     let rec loop n =
       if n > 0L then
         let bytes_to_read = Int64.(to_int (min (of_int block_size) n)) in
-        let* bytes_read = IO.read chan_in block 0 bytes_to_read in
+        IO.read chan_in block 0 bytes_to_read >>= fun bytes_read ->
         match bytes_read with
         | 0 -> raise IO_error
         | bytes_read ->
-            let* () = write_exactly chan_out block 0 bytes_read in
+            write_exactly chan_out block 0 bytes_read >>= fun () ->
             loop Int64.(sub n (of_int bytes_read))
       else
         IO.return () in
@@ -267,7 +267,7 @@ module Make (IO: IO) = struct
     let rec loop n =
       if n > 0L then
         let bytes_to_read = Int64.(to_int (min (of_int block_size) n)) in
-        let* bytes_read = IO.read chan_in block 0 bytes_to_read in
+        IO.read chan_in block 0 bytes_to_read >>= fun bytes_read ->
         match bytes_read with
         | 0 -> raise IO_error
         | bytes_read -> loop Int64.(sub n (of_int bytes_read))
@@ -279,22 +279,22 @@ module Make (IO: IO) = struct
 
   let extract input proc =
     let process_entry hdr = 
-      let* extract = proc hdr in
+      proc hdr >>= fun extract ->
       match extract with
       | None -> skip input (block_pad hdr.Header.size)
       | Some output ->
-          let* () = copy input output hdr.size in
-          let* () = IO.close_out output in
+          copy input output hdr.size >>= fun () ->
+          IO.close_out output >>= fun () ->
           skip input Int64.(sub (block_pad hdr.size) hdr.size) in
 
     let bytes = Bytes.create 512 in
 
     let rec loop () =
-      let* () = read_exactly input bytes 0 sizeof_header in
+      read_exactly input bytes 0 sizeof_header >>= fun () ->
       if Bytes.get_uint8 bytes 0 = 0 then
         IO.return ()
       else
-        let* () = Header.of_bytes bytes |> process_entry in
+        Header.of_bytes bytes |> process_entry >>= fun () ->
         loop () in
 
     loop ()
@@ -307,32 +307,32 @@ module Make (IO: IO) = struct
       write_exactly output block 0 pad in
 
     let pack input hdr =
-      let* () = copy input output hdr.Header.size in
-      let* () = pad hdr.size in
+      copy input output hdr.Header.size >>= fun () ->
+      pad hdr.size >>= fun () ->
       IO.close_in input in
 
     let rec close_and_loop input next =
       match input with
       | Some input ->
-          let* () = IO.close_in input in
+          IO.close_in input >>= fun () ->
           loop next
       | None -> loop next
 
     and loop files =
       match files () with
       | Seq.Nil ->
-          let* () = write_exactly output block 0 sizeof_header in
+          write_exactly output block 0 sizeof_header >>= fun () ->
           write_exactly output block 0 sizeof_header
       | Seq.Cons (proc, next) ->
-          let* r = proc () in
+          proc () >>= fun r ->
           let hdr_bytes = r |> fst |> Header.to_bytes in
-          let* () = write_exactly output hdr_bytes 0 sizeof_header in
+          write_exactly output hdr_bytes 0 sizeof_header >>= fun () ->
           match r with
           | { typeflag = Normal; _ } as hdr, Some input ->
-              let* () = pack input hdr in
+              pack input hdr >>= fun () ->
               loop next
           | { typeflag = Hard_link; _ } as hdr, Some input ->
-              let* () = pack input hdr in
+              pack input hdr >>= fun () ->
               loop next
           | _, input -> close_and_loop input next in
     loop files
