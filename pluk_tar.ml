@@ -131,10 +131,12 @@ module Header = struct
       | None -> s in
 
     let num s =
-      Scanf.sscanf s "%o" Fun.id in
+      if s.[0] = '\000' then 0
+      else Scanf.sscanf s "%o" Fun.id in
 
     let num_long s =
-      Scanf.sscanf s "%Lo" Fun.id in
+      if s.[0] = '\000' then 0L
+      else Scanf.sscanf s "%Lo" Fun.id in
 
     let typeflag_of_char = function
       | '0' -> Normal
@@ -202,25 +204,29 @@ module type IO = sig
 end
 
 module type Archive = sig
-  module IO: IO
+  type in_channel
+  type out_channel
+  type 'a t
 
-  val extract: IO.in_channel ->
-               (Header.t -> IO.out_channel option IO.t) ->
-               unit IO.t
+  val extract: in_channel ->
+               (Header.t -> out_channel option t) ->
+               unit t
 
-  val create: IO.out_channel ->
-              (unit -> (Header.t * IO.in_channel option) IO.t) Seq.t ->
-              unit IO.t
+  val create: out_channel ->
+              (unit -> (Header.t * in_channel option) t) Seq.t ->
+              unit t
 
   val copy: ?block_size:int ->
-            IO.in_channel ->
-            IO.out_channel ->
+            in_channel ->
+            out_channel ->
             int64 ->
-            unit IO.t
+            unit t
 end
 
-module Make (IO: IO) : Archive with module IO = IO = struct
-  module IO = IO
+module Make (IO: IO) = struct
+  type in_channel = IO.in_channel
+  type out_channel = IO.out_channel
+  type 'a t = 'a IO.t
 
   let ( let* ) = IO.bind
 

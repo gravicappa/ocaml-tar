@@ -94,50 +94,35 @@ end
 
 module type Archive = sig
   (** Type of Make functor result module *)
+  type in_channel
+  type out_channel
+  type 'a t
 
-  module IO: IO
-
-  val extract: IO.in_channel ->
-               (Header.t -> IO.out_channel option IO.t) ->
-               unit IO.t
+  val extract: in_channel ->
+               (Header.t -> out_channel option t) ->
+               unit t
   (** [extract input proc] extracts TAR archive from [input] calling [proc]
       for each entry. [proc] is responsible for classifying entry type
       creating directories if required and it returns a channel for files
       for contents to be written to. Can raise IO_error exception. *)
 
-  val create: IO.out_channel ->
-              (unit -> (Header.t * IO.in_channel option) IO.t) Seq.t ->
-              unit IO.t
+  val create: out_channel ->
+              (unit -> (Header.t * in_channel option) t) Seq.t ->
+              unit t
   (** [create output seq] creates TAR archive and writes it to [output].
       Can raise IO_error exception. *)
 
   val copy: ?block_size:int ->
-            IO.in_channel ->
-            IO.out_channel ->
+            in_channel ->
+            out_channel ->
             int64 ->
-            unit IO.t
+            unit t
   (** Utility function for passing data between channels
       [copy input output len] copies [len] bytes from [input] channel to
       [output] using blocks of [block_size] bytes length. Raises IO_error on 
       failures. *)
 end
 
-module Make: functor (IO : IO) -> sig
-  (** Functor to create module of type Archive specialized by IO module. *)
-
-  module IO: IO with type out_channel = IO.out_channel
-                     and type in_channel = IO.in_channel
-                     and type 'a t = 'a IO.t
-
-  val extract:
-    IO.in_channel ->
-    (Header.t -> IO.out_channel option IO.t) -> unit IO.t
-
-  val create:
-    IO.out_channel ->
-    (unit -> (Header.t * IO.in_channel option) IO.t) Seq.t ->
-    unit IO.t
-
-  val copy: ?block_size:int -> IO.in_channel -> IO.out_channel -> int64 ->
-            unit IO.t
-end
+module Make (IO : IO) : Archive with type in_channel = IO.in_channel
+                                     and type out_channel = IO.out_channel
+                                     and type 'a t = 'a IO.t

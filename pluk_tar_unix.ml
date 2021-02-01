@@ -7,6 +7,8 @@ module IO = struct
 
   let return a = a
 
+  let resolve a = a
+
   let in_channel_of_fd a = a
   let out_channel_of_fd a = a
 
@@ -84,20 +86,22 @@ let extract fd proc =
     match hdr.typeflag with
     | Normal ->
         let flags = Unix.[O_CREAT; O_WRONLY; O_TRUNC] in
-        let fd = Unix.openfile (proc hdr.name) flags hdr.mode in
-        Archive.IO.(return (Some (IO.out_channel_of_fd fd)))
+        let name = proc hdr.name in
+        mkdir_rec (Filename.dirname name) (hdr.mode lor 0o111);
+        let fd = Unix.openfile name flags hdr.mode in
+        IO.(return (Some (IO.out_channel_of_fd fd)))
     | Hard_link ->
         let _ =
           Option.map (fun link -> Unix.link link (proc hdr.name)) hdr.link in
-        Archive.IO.return None
+        IO.return None
     | Symbolic_link ->
         let _ =
           Option.map (fun link -> Unix.symlink link (proc hdr.name)) hdr.link in
-        Archive.IO.return None
+        IO.return None
     | Directory ->
         mkdir_rec (proc hdr.name) hdr.mode;
-        Archive.IO.return None
-    | _ -> Archive.IO.return None in
+        IO.return None
+    | _ -> IO.return None in
 
   Archive.extract fd proc
 
