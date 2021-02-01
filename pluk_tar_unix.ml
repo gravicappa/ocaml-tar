@@ -7,11 +7,6 @@ module IO = struct
 
   let return a = a
 
-  let resolve a = a
-
-  let in_channel_of_fd a = a
-  let out_channel_of_fd a = a
-
   let rec with_restart op fd buf off len =
     try op fd buf off len with
     | Unix.Unix_error (Unix.EINTR,_,_) -> with_restart op fd buf off len
@@ -89,7 +84,7 @@ let extract fd proc =
         let name = proc hdr.name in
         mkdir_rec (Filename.dirname name) (hdr.mode lor 0o111);
         let fd = Unix.openfile name flags hdr.mode in
-        IO.(return (Some (IO.out_channel_of_fd fd)))
+        IO.(return (Some fd))
     | Hard_link ->
         let _ =
           Option.map (fun link -> Unix.link link (proc hdr.name)) hdr.link in
@@ -108,7 +103,7 @@ let extract fd proc =
 let extract_from_file path target =
   let fd = Unix.openfile path [O_RDONLY] 0 in
   Fun.protect ~finally: (fun () -> Unix.close fd) @@ fun () ->
-    extract (IO.in_channel_of_fd fd) (Filename.concat target)
+    extract fd (Filename.concat target)
 
 let create_from_files fd proc files =
   let mk_entry path =

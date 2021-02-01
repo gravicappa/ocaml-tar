@@ -9,12 +9,9 @@ module IO : sig
   type 'a t = 'a
   val bind : 'a -> ('a -> 'b) -> 'b
   val return : 'a -> 'a t
-  val resolve : 'a t -> 'a
 
   type in_channel = Unix.file_descr
   type out_channel = Unix.file_descr
-  val in_channel_of_fd: Unix.file_descr -> in_channel
-  val out_channel_of_fd: Unix.file_descr -> in_channel
   val write : out_channel -> bytes -> int -> int -> int
   val read : in_channel -> bytes -> int -> int -> int
   val close_in : in_channel -> unit
