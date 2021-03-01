@@ -80,30 +80,31 @@ let extract fd proc =
   let proc (hdr : Tar.Header.t) =
     match hdr.typeflag with
     | Normal ->
-        let flags = Unix.[O_CREAT; O_WRONLY; O_TRUNC] in
-        let name = proc hdr.name in
-        mkdir_rec (Filename.dirname name) (hdr.mode lor 0o111);
-        let fd = Unix.openfile name flags hdr.mode in
+        let name, mode = proc hdr.name hdr.mode in
+        mkdir_rec (Filename.dirname name) (mode lor 0o111);
+        let fd = Unix.(openfile name [O_CREAT; O_WRONLY; O_TRUNC] mode) in
         IO.(return (Some fd))
     | Hard_link ->
-        let _ =
-          Option.map (fun link -> Unix.link link (proc hdr.name)) hdr.link in
+        let name, _ = proc hdr.name hdr.mode in
+        let _ = Option.map (fun link -> Unix.link link name) hdr.link in
         IO.return None
     | Symbolic_link ->
-        let _ =
-          Option.map (fun link -> Unix.symlink link (proc hdr.name)) hdr.link in
+        let name, _ = proc hdr.name hdr.mode in
+        let _ = Option.map (fun link -> Unix.symlink link name) hdr.link in
         IO.return None
     | Directory ->
-        mkdir_rec (proc hdr.name) hdr.mode;
+        let name, mode = proc hdr.name hdr.mode in
+        mkdir_rec name mode;
         IO.return None
     | _ -> IO.return None in
 
   Archive.extract fd proc
 
-let extract_from_file path target =
+let extract_from_file ?(mode_proc = Fun.id) path target =
   let fd = Unix.openfile path [O_RDONLY] 0 in
+  let proc path mode = Filename.concat target path, mode_proc mode in
   Fun.protect ~finally: (fun () -> Unix.close fd) @@ fun () ->
-    extract fd (Filename.concat target)
+    extract fd proc
 
 let create_from_files fd proc files =
   let mk_entry path =
