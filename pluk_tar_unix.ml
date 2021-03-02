@@ -81,7 +81,7 @@ let extract fd proc =
     match hdr.typeflag with
     | Normal ->
         let name, mode = proc hdr.name hdr.mode in
-        mkdir_rec (Filename.dirname name) (mode lor 0o111);
+        mkdir_rec (Filename.dirname name) (mode lor 0o300);
         let fd = Unix.(openfile name [O_CREAT; O_WRONLY; O_TRUNC] mode) in
         IO.(return (Some fd))
     | Hard_link ->
